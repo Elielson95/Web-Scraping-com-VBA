@@ -1,0 +1,142 @@
+'Criar um codigo para identificar quando a sessão for encerrada
+'Inserir um codigo para reserva de margem
+'Criar um codigo para não bloquear o excel quando executa a macro ao mesmo tempo
+
+
+
+
+
+Sub consultaGovba()
+    Dim objIE As InternetExplorer
+    Dim linkUrl_1 As String
+    Dim linkUrl_2 As String
+    Dim cpfIncorreto As String
+    Dim linkCpf_1 As String
+    Dim linkCpf_2 As String
+    Dim indiceBusca As Integer
+    Dim linha_1 As String
+    Dim linha_2 As String
+    Dim linha_3 As String
+    Dim linha_4 As String
+    
+    
+    
+    'Dim indiceContinuar As Integer
+       
+    'Cells(1, 8) = 2
+    linkUrl_1 = "https://"
+    linkCpf_1 = "https://"
+
+    
+    Set objIE = New InternetExplorer
+    objIE.Visible = True
+    
+    objIE.navigate "https://"
+    
+    Do While objIE.Busy And objIE.readyState <> READYSTATE_COMPLETE
+        DoEvents
+    Loop
+    
+    Application.Wait (Now + TimeValue("00:00:04"))
+    objIE.document.all.Item("txtLogin").Value = "*********"
+    objIE.document.all.Item("txtSenha").Value = "*********"
+    objIE.document.getElementsByClassName("botao-azul")(0).Click
+    Application.Wait (Now + TimeValue("00:00:04"))
+    objIE.document.getElementsByTagName("input")(5).Click
+    Application.Wait (Now + TimeValue("00:00:04"))
+    
+    objIE.navigate "https://"
+    Application.Wait (Now + TimeValue("00:00:04"))
+  
+     
+    indiceBusca = Cells(1, 8)
+    Do While Cells(indiceBusca, 1) > 0
+    
+    
+        
+        Do While Cells(indiceBusca, 2) <> ""
+            indiceBusca = indiceBusca + 1
+            Cells(1, 8) = indiceBusca
+        Loop
+        
+        objIE.document.all.Item("body_cpfTextBox").Value = Cells(indiceBusca, 1)
+        objIE.document.all.Item("body_pesquisarButton").Click
+        Application.Wait (Now + TimeValue("00:00:05"))
+        linkUrl_2 = objIE.LocationURL
+        objIE.document.all.Item("body_ucAjaxModalPopup1_btnConfirmarPopup").Click
+        
+        If StrComp(linkUrl_1, linkUrl_2, vbTextCompare) = 0 Then
+            objIE.document.all.Item("body_servidorGridView_selectImageButton_1").Click
+            Application.Wait (Now + TimeValue("00:00:04"))
+        End If
+            
+        linkCpf_2 = objIE.LocationURL
+        
+        If StrComp(linkCpf_1, linkCpf_2, vbTextCompare) = 0 Then
+            Cells(indiceBusca, 2) = Format((objIE.document.all.Item("body_margemTextBox").Value), "currency")
+            Cells(indiceBusca, 3) = (objIE.document.all.Item("body_categoriaTextBox").Value)
+            Cells(indiceBusca, 4) = (objIE.document.all.Item("body_txtSituacao").Value)
+            'inserir o codigo para reserva de margem aqui
+            'MsgBox (objIE.document.getElementsByTagName("td")(2))
+            'If StrComp(linkCpf_1, linkCpf_2, vbTextCompare) = 0
+            
+            
+            
+            
+            objIE.navigate "https://"
+            Application.Wait (Now + TimeValue("00:00:04"))
+        End If
+    
+    indiceBusca = indiceBusca + 1
+    Cells(1, 8) = indiceBusca
+    
+    Loop
+     
+    Cells(1, 8) = 2
+    'Consultar Inativo
+    
+    objIE.navigate "https://"
+    Application.Wait (Now + TimeValue("00:00:04"))
+    objIE.document.getElementsByTagName("input")(6).Click
+    Application.Wait (Now + TimeValue("00:00:04"))
+    objIE.navigate "https://"
+    
+    indiceBusca = Cells(1, 8)
+    Do While Cells(indiceBusca, 1) > 0
+    
+        Do While Cells(indiceBusca, 2) <> "null"
+            indiceBusca = indiceBusca + 1
+            Cells(1, 8) = indiceBusca
+        Loop
+       
+            Application.Wait (Now + TimeValue("00:00:03"))
+            objIE.document.all.Item("body_cpfTextBox").Value = Cells(indiceBusca, 1)
+            Application.Wait (Now + TimeValue("00:00:05"))
+            objIE.document.all.Item("body_pesquisarButton").Click
+            Application.Wait (Now + TimeValue("00:00:05"))
+            objIE.document.all.Item("body_ucAjaxModalPopup1_btnConfirmarPopup").Click
+            linkUrl_2 = objIE.LocationURL
+            
+            If StrComp(linkUrl_1, linkUrl_2, vbTextCompare) = 0 Then
+                objIE.document.all.Item("body_servidorGridView_selectImageButton_1").Click
+                Application.Wait (Now + TimeValue("00:00:04"))
+            End If
+        
+            linkCpf_2 = objIE.LocationURL
+            If StrComp(linkCpf_1, linkCpf_2, vbTextCompare) = 0 Then
+                Cells(indiceBusca, 2) = Format((objIE.document.all.Item("body_margemTextBox").Value), "currency")
+                Cells(indiceBusca, 3) = (objIE.document.all.Item("body_categoriaTextBox").Value)
+                Cells(indiceBusca, 4) = (objIE.document.all.Item("body_txtSituacao").Value)
+                objIE.navigate "https://"
+                Application.Wait (Now + TimeValue("00:00:04"))
+            End If
+    
+        indiceBusca = indiceBusca + 1
+        indiceBusca = Cells(1, 8)
+    Loop
+    Cells(1, 8) = 2
+    MsgBox ("Consulta finalizada!"), vbInformation, "Margem"
+    Stop
+       
+End Sub
+
