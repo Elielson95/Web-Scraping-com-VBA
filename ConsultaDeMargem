@@ -1,142 +1,293 @@
-'Criar um codigo para identificar quando a sessão for encerrada
-'Inserir um codigo para reserva de margem
+'Tornar mais rapido a consulta
+'Inserir uma opção onde o usuário configure o tempo de cada consulta
+'Procurar em todas as matriculas ativas
 'Criar um codigo para não bloquear o excel quando executa a macro ao mesmo tempo
+'Verificar as 4 matriculas
 
 
+Option Explicit
 
+Public ListaGovBa As Workbook
+Public Guia As Worksheet
+Const NomeGuia As String = "ListaGovBa"
 
-
-Sub consultaGovba()
+Public Sub consultaGovba()
     Dim objIE As InternetExplorer
-    Dim linkUrl_1 As String
-    Dim linkUrl_2 As String
+    Dim linkUrl_1, linkUrl_2 As String
     Dim cpfIncorreto As String
-    Dim linkCpf_1 As String
-    Dim linkCpf_2 As String
+    Dim linkCpf_1, linkCpf_2 As String
     Dim indiceBusca As Integer
-    Dim linha_1 As String
-    Dim linha_2 As String
-    Dim linha_3 As String
-    Dim linha_4 As String
+    Dim logado As String
+    Dim login As String
+    Dim senha As String
+    Dim ativa As String
+    Dim suspenso As Boolean
+    Dim Arquivo As String
+    Dim aguardar As Date
+    Dim tempoI As Double
+    Dim cpf As String
+    Dim qnt As Integer
+    Dim tipo1, tipo2, tipo3 As String
+    Dim ativo, inativo As Boolean
+    Dim pular As Boolean
     
     
-    
-    'Dim indiceContinuar As Integer
-       
-    'Cells(1, 8) = 2
-    linkUrl_1 = "https://"
-    linkCpf_1 = "https://"
-
-    
+    'Instanciar
+    aguardar = TimeValue("00:00:00"&ThisWorkbook.Sheets("BD").Cells(2, 13))
+    Arquivo = ThisWorkbook.Path & "\ListaGovBa.xlsx"
     Set objIE = New InternetExplorer
+    Application.Wait (Now + TimeValue(aguardar))
+    objIE.navigate "https://govbahia.consiglog.com.br/"
+    
+     'Abrir arquivo para consulta
+    Set ListaGovBa = Application.Workbooks.Open(Arquivo)
+    Set Guia = ListaGovBa.Worksheets(NomeGuia)
+    Application.ScreenUpdating = True
+
+    'Igualar arquivos
+    ativo = ThisWorkbook.Sheets("BD").Cells(2, 11).Value
+    inativo = ThisWorkbook.Sheets("BD").Cells(2, 12).Value
+    login = ThisWorkbook.Sheets("BD").Cells(2, 8)
+    senha = ThisWorkbook.Sheets("BD").Cells(2, 9)
+    tipo1 = "Sem Vínculo | Comiss Celetista"
+    tipo2 = "Magistério | REDA Licenciado"
+    tipo3 = "Sem Vínculo | Comiss Estatutário"
+    linkUrl_1 = "https://govbahia.consiglog.com.br/Servidores/ServidorMatriculaLista.aspx?val=false"
+    linkCpf_1 = "https://govbahia.consiglog.com.br/Margem/ConsultaMargemDados.aspx"
+    logado = "ucAjaxModalPopupConfirmacao1_btnConfirmarPopup"
+    aguardar = TimeValue("00:00:06")
+    ativa = "Ativo"
+    pular = True
+    
+    
+    'Visibilidade das páginas
     objIE.Visible = True
-    
-    objIE.navigate "https://"
-    
-    Do While objIE.Busy And objIE.readyState <> READYSTATE_COMPLETE
-        DoEvents
-    Loop
-    
-    Application.Wait (Now + TimeValue("00:00:04"))
-    objIE.document.all.Item("txtLogin").Value = "*********"
-    objIE.document.all.Item("txtSenha").Value = "*********"
-    objIE.document.getElementsByClassName("botao-azul")(0).Click
-    Application.Wait (Now + TimeValue("00:00:04"))
-    objIE.document.getElementsByTagName("input")(5).Click
-    Application.Wait (Now + TimeValue("00:00:04"))
-    
-    objIE.navigate "https://"
-    Application.Wait (Now + TimeValue("00:00:04"))
-  
-     
-    indiceBusca = Cells(1, 8)
-    Do While Cells(indiceBusca, 1) > 0
-    
-    
+    Windows(ListaGovBa.Name).Visible = True
+
+    'Tratamento de erro
+    On Error GoTo TE
+
+        'Logado na Página
+        Application.Wait (Now + TimeValue(aguardar))
+        objIE.document.all.Item("txtLogin").Value = login
+        objIE.document.all.Item("txtSenha").Value = senha
+        objIE.document.getElementsByClassName("botao-azul")(0).Click
+        objIE.document.all.Item("ucAjaxModalPopupConfirmacao1_btnConfirmarPopup").Click
+        Application.Wait (Now + TimeValue(aguardar))
+        objIE.document.getElementsByTagName("input")(5).Click
+        Application.Wait (Now + TimeValue(aguardar))
+        objIE.navigate "https://govbahia.consiglog.com.br/Margem/ConsultaMargem.aspx"
+        Application.Wait (Now + TimeValue(aguardar))
+        indiceBusca = ThisWorkbook.Sheets("BD").Cells(2, 10).Value
         
-        Do While Cells(indiceBusca, 2) <> ""
-            indiceBusca = indiceBusca + 1
-            Cells(1, 8) = indiceBusca
-        Loop
-        
-        objIE.document.all.Item("body_cpfTextBox").Value = Cells(indiceBusca, 1)
-        objIE.document.all.Item("body_pesquisarButton").Click
-        Application.Wait (Now + TimeValue("00:00:05"))
-        linkUrl_2 = objIE.LocationURL
-        objIE.document.all.Item("body_ucAjaxModalPopup1_btnConfirmarPopup").Click
-        
-        If StrComp(linkUrl_1, linkUrl_2, vbTextCompare) = 0 Then
-            objIE.document.all.Item("body_servidorGridView_selectImageButton_1").Click
-            Application.Wait (Now + TimeValue("00:00:04"))
-        End If
+        'Consulta dos CPFs
+        Do While Guia.Cells(indiceBusca, 1) <> "" And ativo = True
+        tempoI = Now()
+voltarAtivo:
+            suspenso = False
             
-        linkCpf_2 = objIE.LocationURL
-        
-        If StrComp(linkCpf_1, linkCpf_2, vbTextCompare) = 0 Then
-            Cells(indiceBusca, 2) = Format((objIE.document.all.Item("body_margemTextBox").Value), "currency")
-            Cells(indiceBusca, 3) = (objIE.document.all.Item("body_categoriaTextBox").Value)
-            Cells(indiceBusca, 4) = (objIE.document.all.Item("body_txtSituacao").Value)
-            'inserir o codigo para reserva de margem aqui
-            'MsgBox (objIE.document.getElementsByTagName("td")(2))
-            'If StrComp(linkCpf_1, linkCpf_2, vbTextCompare) = 0
+            'Buscando CPF sem a margem preenchida
+            Do While Guia.Cells(indiceBusca, 2) <> ""
+                
+                indiceBusca = indiceBusca + 1
+                ThisWorkbook.Sheets("BD").Cells(2, 10) = indiceBusca
             
+            Loop
             
+            'Contador de caracters
+            cpf = Guia.Cells(indiceBusca, 1).Value
+            qnt = VBA.Len(cpf)
             
+            'Máscara dos zeros a esqueda até 6 digitos no cpf retirado
             
-            objIE.navigate "https://"
-            Application.Wait (Now + TimeValue("00:00:04"))
-        End If
-    
-    indiceBusca = indiceBusca + 1
-    Cells(1, 8) = indiceBusca
-    
-    Loop
-     
-    Cells(1, 8) = 2
-    'Consultar Inativo
-    
-    objIE.navigate "https://"
-    Application.Wait (Now + TimeValue("00:00:04"))
-    objIE.document.getElementsByTagName("input")(6).Click
-    Application.Wait (Now + TimeValue("00:00:04"))
-    objIE.navigate "https://"
-    
-    indiceBusca = Cells(1, 8)
-    Do While Cells(indiceBusca, 1) > 0
-    
-        Do While Cells(indiceBusca, 2) <> "null"
-            indiceBusca = indiceBusca + 1
-            Cells(1, 8) = indiceBusca
-        Loop
-       
-            Application.Wait (Now + TimeValue("00:00:03"))
-            objIE.document.all.Item("body_cpfTextBox").Value = Cells(indiceBusca, 1)
-            Application.Wait (Now + TimeValue("00:00:05"))
+            'Pesquisando cpf
+            objIE.document.all.Item("body_cpfTextBox").Value = cpf
             objIE.document.all.Item("body_pesquisarButton").Click
-            Application.Wait (Now + TimeValue("00:00:05"))
+            Application.Wait (Now + TimeValue(aguardar))
             objIE.document.all.Item("body_ucAjaxModalPopup1_btnConfirmarPopup").Click
-            linkUrl_2 = objIE.LocationURL
+            Application.Wait (Now + TimeValue("00:00:03"))
+    
+            'Verificando mais de uma matricula e procurando a matricula suspensa - parte 1 retirado
             
-            If StrComp(linkUrl_1, linkUrl_2, vbTextCompare) = 0 Then
-                objIE.document.all.Item("body_servidorGridView_selectImageButton_1").Click
-                Application.Wait (Now + TimeValue("00:00:04"))
+
+            
+                If pular = True Then
+erroAtivo:
+                        ThisWorkbook.Sheets("BD").Cells(2, 10) = indiceBusca
+                        indiceBusca = indiceBusca + 1
+                        objIE.navigate "https://govbahia.consiglog.com.br/Margem/ConsultaMargem.aspx"
+                        Application.Wait (Now + TimeValue(aguardar))
+                        ActiveWorkbook.Save
+                        ThisWorkbook.Save
+                    Resume voltarAtivo
+                End If
+
             End If
         
             linkCpf_2 = objIE.LocationURL
+
             If StrComp(linkCpf_1, linkCpf_2, vbTextCompare) = 0 Then
-                Cells(indiceBusca, 2) = Format((objIE.document.all.Item("body_margemTextBox").Value), "currency")
-                Cells(indiceBusca, 3) = (objIE.document.all.Item("body_categoriaTextBox").Value)
-                Cells(indiceBusca, 4) = (objIE.document.all.Item("body_txtSituacao").Value)
-                objIE.navigate "https://"
-                Application.Wait (Now + TimeValue("00:00:04"))
+                Application.Wait (Now + TimeValue(aguardar))
+                'Verificando se a matricula está suspensa - parte 2
+            
+                If StrComp(objIE.document.getElementById("body_situacaoServidorLabel").innerText, "Suspenso", vbTextCompare) = 0 Then
+                    suspenso = True
+                    objIE.navigate "https://govbahia.consiglog.com.br/Margem/ConsultaMargem.aspx"
+                ElseIf StrComp(objIE.document.all.Item("body_categoriaTextBox").Value, tipo1, vbTextCompare) = 0 Then
+                    suspenso = True
+                    objIE.navigate "https://govbahia.consiglog.com.br/Margem/ConsultaMargem.aspx"
+                ElseIf StrComp(objIE.document.all.Item("body_categoriaTextBox").Value, tipo2, vbTextCompare) = 0 Then
+                    suspenso = True
+                    objIE.navigate "https://govbahia.consiglog.com.br/Margem/ConsultaMargem.aspx"
+                End If
+                Application.Wait (Now + TimeValue(aguardar))                
+                If suspenso = False Then
+                    Guia.Cells(indiceBusca, 2) = Format((objIE.document.all.Item("body_margemTextBox").Value), "currency")
+                    Guia.Cells(indiceBusca, 3) = (objIE.document.all.Item("body_categoriaTextBox").Value)
+                    Guia.Cells(indiceBusca, 4) = (objIE.document.all.Item("body_txtSituacao").Value)
+                    objIE.navigate "https://govbahia.consiglog.com.br/Margem/ConsultaMargem.aspx"
+                    'Application.Wait (Now + TimeValue(aguardar))
+                End If
             End If
-    
-        indiceBusca = indiceBusca + 1
-        indiceBusca = Cells(1, 8)
-    Loop
-    Cells(1, 8) = 2
-    MsgBox ("Consulta finalizada!"), vbInformation, "Margem"
-    Stop
+            Guia.Cells(2, 5) = Now() - tempoI
+            ThisWorkbook.Sheets("BD").Cells(2, 10) = indiceBusca
+            indiceBusca = indiceBusca + 1
+        Loop
+        ThisWorkbook.Sheets("BD").Cells(2, 10) = 2
+        ThisWorkbook.Sheets("BD").Cells(2, 11) = False
+        ThisWorkbook.Sheets("BD").Cells(2, 12) = True
+        ativo = ThisWorkbook.Sheets("BD").Cells(2, 11).Value
+        inativo = ThisWorkbook.Sheets("BD").Cells(2, 12).Value
+        ActiveWorkbook.Save
+        ThisWorkbook.Save
+'----------------------------------------------------------------------------------------------------------------------
+        'Consultar Inativo
+        
+        objIE.navigate "https://govbahia.consiglog.com.br/LoginSelecao.aspx"
+        Application.Wait (Now + TimeValue(aguardar))
+        objIE.document.getElementsByTagName("input")(6).Click
+        Application.Wait (Now + TimeValue(aguardar))
+        objIE.navigate "https://govbahia.consiglog.com.br/Margem/ConsultaMargem.aspx"
+        Application.Wait (Now + TimeValue(aguardar))
+        ThisWorkbook.Sheets("BD").Cells(2, 10) = 2
+        indiceBusca = ThisWorkbook.Sheets("BD").Cells(2, 10).Value
+        
+        'Consulta dos CPFs
+        Do While Guia.Cells(indiceBusca, 1) <> "" And inativo = True
+voltarInativo:
+        suspenso = False
+        
+        'Buscando CPF sem a margem preenchida
+        Do While Guia.Cells(indiceBusca, 2) <> ""
+            
+            indiceBusca = indiceBusca + 1
+            ThisWorkbook.Sheets("BD").Cells(2, 10) = indiceBusca
+        
+        Loop
+        
+        'Contador de caracters
+        cpf = Guia.Cells(indiceBusca, 1).Value
+        qnt = VBA.Len(cpf)
+        
+        'Máscara dos zeros a esqueda até 6 digitos no cpf retirado
        
+        'Pesquisando cpf
+        objIE.document.all.Item("body_cpfTextBox").Value = cpf
+        objIE.document.all.Item("body_pesquisarButton").Click
+        Application.Wait (Now + TimeValue(aguardar))
+        linkUrl_2 = objIE.LocationURL
+        objIE.document.all.Item("body_ucAjaxModalPopup1_btnConfirmarPopup").Click
+        Application.Wait (Now + TimeValue(aguardar))
+
+        'Verificando mais de uma matricula e procurando a matricula suspensa - parte 1 retirado
+
+    
+        linkCpf_2 = objIE.LocationURL
+
+        If StrComp(linkCpf_1, linkCpf_2, vbTextCompare) = 0 Then
+            Application.Wait (Now + TimeValue(aguardar))
+            'Verificando se a matricula está suspensa - parte 2
+        
+            If StrComp(objIE.document.getElementById("body_situacaoServidorLabel").innerText, "Suspenso", vbTextCompare) = 0 Then
+                suspenso = True
+                objIE.navigate "https://govbahia.consiglog.com.br/Margem/ConsultaMargem.aspx"
+                Application.Wait (Now + TimeValue(aguardar))
+            ElseIf StrComp(objIE.document.all.Item("body_categoriaTextBox").Value, tipo1, vbTextCompare) = 0 Then
+                suspenso = True
+                objIE.navigate "https://govbahia.consiglog.com.br/Margem/ConsultaMargem.aspx"
+                Application.Wait (Now + TimeValue(aguardar))
+            ElseIf StrComp(objIE.document.all.Item("body_categoriaTextBox").Value, tipo2, vbTextCompare) = 0 Then
+                suspenso = True
+                objIE.navigate "https://govbahia.consiglog.com.br/Margem/ConsultaMargem.aspx"
+                Application.Wait (Now + TimeValue(aguardar))
+            ElseIf StrComp(objIE.document.all.Item("body_categoriaTextBox").Value, tipo3, vbTextCompare) = 0 Then
+                suspenso = True
+                objIE.navigate "https://govbahia.consiglog.com.br/Margem/ConsultaMargem.aspx"
+                Application.Wait (Now + TimeValue(aguardar))
+            End If
+                            
+            If suspenso = False Then
+                Guia.Cells(indiceBusca, 2) = Format((objIE.document.all.Item("body_margemTextBox").Value), "currency")
+                Guia.Cells(indiceBusca, 3) = (objIE.document.all.Item("body_categoriaTextBox").Value)
+                Guia.Cells(indiceBusca, 4) = (objIE.document.all.Item("body_txtSituacao").Value)
+                objIE.navigate "https://govbahia.consiglog.com.br/Margem/ConsultaMargem.aspx"
+                Application.Wait (Now + TimeValue(aguardar))
+            End If
+        End If
+        
+        ThisWorkbook.Sheets("BD").Cells(2, 10) = indiceBusca
+        indiceBusca = indiceBusca + 1
+    Loop
+        ThisWorkbook.Sheets("BD").Cells(2, 10) = 2
+        MsgBox ("Consulta finalizada!"), vbInformation, "Margem GovBa"
+        ThisWorkbook.Sheets("BD").Cells(2, 11) = True
+        ThisWorkbook.Sheets("BD").Cells(2, 12) = False
+        ActiveWorkbook.Save
+        ThisWorkbook.Save
+        Stop
+        
+Exit Sub
+TE:
+    ActiveWorkbook.Save
+    ThisWorkbook.Save
+    MsgBox "Erro na execução, inicie novamente!", vbCritical
 End Sub
+
+Public Sub Verificar()
+        Dim CompName As String
+  
+        CompName = Environ$("ComputerName")
+           If StrComp(CompName, "elielsonsouza", vbTextCompare) <> 0 Then 'Aqui você irá colocar o nome da máquina autorizada
+                MsgBox "Este computador não tem direito de executar esta aplicação." 'Mensagem de erro exibida se o nome não bater
+                ActiveWorkbook.Close SaveChanges:=False
+            Else
+                MsgBox "Este computador tem direito de executar esta aplicação." 'Mensagem de erro exibida se o nome não bater
+           End If
+End Sub
+
+Public Sub Validade()
+    
+    Dim expira As Date
+    expira = "16/03/2024"
+    
+    If Date > expira Then
+        MsgBox "Esta planilha expirou, entre em contato com 71986944424 para baixar a nova versão", vbCritical, "Close"
+        Application.DisplayAlerts = False
+    Else
+        MsgBox "Esta planilha expira em " & expira - Date & " Dia(s)", vbInformation
+    End If
+    
+End Sub
+
+Public Sub Zerar()
+    ThisWorkbook.Sheets("BD").Cells(2, 10) = 2
+    ThisWorkbook.Sheets("BD").Cells(2, 11) = True
+    ThisWorkbook.Sheets("BD").Cells(2, 12) = False
+End Sub
+    
+Public Sub ConfiguracaoConsulta()
+        Consulta.Show
+End Sub
+    
+
 
